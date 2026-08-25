@@ -1,0 +1,51 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+
+permissions:
+  contents: read
+
+
+jobs:
+  critical-static-checks:
+    name: Critical static checks
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Install Ruff
+        run: |
+          python -m pip install ruff
+
+      - name: Compile Python sources
+        run: |
+          python -m compileall -q \
+            enterprise_crawler \
+            tests \
+            examples/basic_bot
+
+      - name: Run critical Ruff checks
+        run: |
+          ruff check \
+            enterprise_crawler \
+            tests \
+            examples/basic_bot \
+            --select E9,F63,F7,F82 \
+            --output-format=github

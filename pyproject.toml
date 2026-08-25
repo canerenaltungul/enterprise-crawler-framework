@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "enterprise-crawler-framework"
+dynamic = ["version"]
+
+description = "Enterprise-grade crawler framework."
+readme = "README.md"
+
+license = "MIT"
+license-files = ["LICENSE"]
+
+authors = [
+    { name = "Lord Jester" }
+]
+
+requires-python = ">=3.11"
+
+dependencies = [
+    "requests>=2.31"
+]
+
+
+[project.scripts]
+enterprise-crawler = "enterprise_crawler.cli.main:main"
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["enterprise_crawler*"]
+exclude = [
+    "tests*",
+    "examples*",
+    "templates*",
+    "scripts*",
+    "docs*",
+]
+
+
+[tool.setuptools.dynamic]
+version = { attr = "enterprise_crawler.version.__version__" }
