@@ -1,0 +1,84 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types:
+      - published
+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "GitHub Release tag to publish to PyPI"
+        required: true
+        default: "v1.0.0"
+
+
+permissions:
+  contents: read
+
+
+jobs:
+  publish:
+    name: Publish verified distributions to PyPI
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+      url: https://pypi.org/project/enterprise-crawler-framework/
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      RELEASE_TAG: >-
+        ${{ github.event_name == 'release'
+            && github.event.release.tag_name
+            || inputs.tag }}
+
+    steps:
+      - name: Download verified GitHub Release distributions
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dist
+
+          gh release download \
+            "${RELEASE_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern "*.whl" \
+            --pattern "*.tar.gz" \
+            --dir dist
+
+          echo "Distributions selected for PyPI:"
+          ls -lah dist
+
+      - name: Verify expected distribution count
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          dist = Path("dist")
+
+          wheels = sorted(dist.glob("*.whl"))
+          sdists = sorted(dist.glob("*.tar.gz"))
+
+          if len(wheels) != 1:
+              raise SystemExit(
+                  f"Expected exactly one wheel, found {len(wheels)}: {wheels}"
+              )
+
+          if len(sdists) != 1:
+              raise SystemExit(
+                  f"Expected exactly one sdist, found {len(sdists)}: {sdists}"
+              )
+
+          print(f"Wheel: {wheels[0].name}")
+          print(f"SDist: {sdists[0].name}")
+          PY
+
+      - name: Publish distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
