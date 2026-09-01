@@ -10,7 +10,7 @@ on:
       tag:
         description: "GitHub Release tag to publish to PyPI"
         required: true
-        default: "v1.0.0"
+        type: string
 
 
 permissions:
