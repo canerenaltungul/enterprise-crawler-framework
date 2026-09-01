@@ -5,6 +5,33 @@ file.
 
 The project follows Semantic Versioning.
 
+## [1.0.1] - 2026-09-01
+
+### Changed
+
+- Expanded the public README into a developer-facing product and onboarding
+  surface.
+- Made the PyPI installation path the primary installation guidance.
+- Added a copy-paste quickstart using the supported top-level public API.
+- Documented the existing runtime, HTTP, storage, processing, plugin, event,
+  worker, retry, dead-letter, and CLI capabilities.
+- Added explicit project links for source, issues, releases, changelog, and
+  security information.
+- Added package keywords and supported-Python classifiers to improve package
+  discovery metadata.
+- Refined the package description to describe ECF as production-oriented
+  infrastructure for Python crawlers and data-collection bots.
+
+### Compatibility
+
+- No runtime behavior was intentionally changed.
+- No top-level public API symbol was added, removed, or renamed.
+- No CLI command was added, removed, or renamed.
+- No plugin contract was changed.
+- No event, worker, retry, queue, lease, or dead-letter semantics were changed.
+- `1.0.1` is a backward-compatible documentation, onboarding, and package
+  metadata patch.
+
 ## [1.0.0] - 2026-08-20
 
 ### Added

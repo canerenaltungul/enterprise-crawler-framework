@@ -6,10 +6,11 @@ Version Information
 __title__ = "enterprise-crawler-framework"
 
 __description__ = (
-    "Enterprise-grade crawling framework with event-driven architecture."
+    "Production-oriented infrastructure for reliable Python crawlers "
+    "and data-collection bots."
 )
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 __author__ = "Lord Jester"
 

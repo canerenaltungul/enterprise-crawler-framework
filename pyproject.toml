@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 name = "enterprise-crawler-framework"
 dynamic = ["version"]
 
-description = "Enterprise-grade crawler framework."
+description = "Production-oriented infrastructure for reliable Python crawlers and data-collection bots."
 readme = "README.md"
 
 license = "MIT"
@@ -19,9 +19,37 @@ authors = [
 
 requires-python = ">=3.11"
 
+keywords = [
+    "crawler",
+    "web-crawling",
+    "data-collection",
+    "data-ingestion",
+    "developer-tools",
+    "python",
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
 dependencies = [
     "requests>=2.31"
 ]
+
+
+[project.urls]
+Homepage = "https://github.com/canerenaltungul/enterprise-crawler-framework"
+Repository = "https://github.com/canerenaltungul/enterprise-crawler-framework"
+Issues = "https://github.com/canerenaltungul/enterprise-crawler-framework/issues"
+Changelog = "https://github.com/canerenaltungul/enterprise-crawler-framework/blob/main/CHANGELOG.md"
 
 
 [project.scripts]
