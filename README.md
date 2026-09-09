@@ -80,6 +80,85 @@ From the repository root:
 python examples/basic_bot/hello_bot.py
 ```
 
+## See durability in action
+
+**Write the crawler. ECF handles what happens when production goes wrong.**
+
+A retry is much more useful when its state survives the lifetime of the
+worker process.
+
+The repository includes a two-process demo using ECF's durable SQLite event
+queue and retry policy.
+
+First, run a worker that receives an event, fails once, and persists the retry:
+
+```bash
+python examples/event_pipeline/retry_survives_restart.py fail
+```
+
+The important state after the first process finishes is:
+
+```text
+retry persisted to SQLite
+state=pending
+delivery_count=1
+active_count=1
+```
+
+Then run the recovery phase as a separate Python invocation:
+
+```bash
+python examples/event_pipeline/retry_survives_restart.py recover
+```
+
+The second process opens the same SQLite queue and continues from the
+persisted delivery state:
+
+```text
+reopened SQLite queue
+state=pending
+delivery_count=1
+
+handler: recovered event
+handler: success
+
+delivery_count=2
+result=success
+active_count=0
+```
+
+The example demonstrates that:
+
+```text
+event published
+    ↓
+delivery #1
+    ↓
+temporary failure
+    ↓
+retry persisted
+    ↓
+first process exits
+    ↓
+second process opens the same queue
+    ↓
+delivery #2
+    ↓
+success
+    ↓
+ACK
+```
+
+Clean up the demo state with:
+
+```bash
+python examples/event_pipeline/retry_survives_restart.py reset
+```
+
+This demo specifically demonstrates durable retry state across process
+boundaries. It is not an exactly-once execution claim or a lease-expiration
+crash-recovery demonstration.
+
 ## Why ECF?
 
 A basic crawler can start with a few lines of HTTP code.
