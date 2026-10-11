@@ -80,6 +80,18 @@ From the repository root:
 python examples/basic_bot/hello_bot.py
 ```
 
+## Use your own collection code
+
+For HTTP collection with persistent jobs, retries, atomic JSON output and a
+SQLite dead-letter queue, follow the [durable collection guide](docs/getting-started/durable-collection.md).
+It includes local setup, failure/restart steps, job inspection and the function
+to replace with your own collection code.
+
+This path connects a collection function directly to an event handler.
+`BaseBot.run()` returns an `ExecutionResult`; a FAILED result returned normally
+from a handler does **not** automatically trigger event retry. The guide explains
+this boundary, resource ownership and the limits of resume and lease recovery.
+
 ## See durability in action
 
 **Write the crawler. ECF handles what happens when production goes wrong.**

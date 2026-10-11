@@ -39,13 +39,13 @@ jobs:
           python -m compileall -q \
             enterprise_crawler \
             tests \
-            examples/basic_bot
+            examples
 
       - name: Run critical Ruff checks
         run: |
           ruff check \
             enterprise_crawler \
             tests \
-            examples/basic_bot \
+            examples \
             --select E9,F63,F7,F82 \
             --output-format=github
