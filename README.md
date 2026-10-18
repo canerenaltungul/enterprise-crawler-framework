@@ -82,6 +82,20 @@ python examples/basic_bot/hello_bot.py
 
 ## Use your own collection code
 
+Try the failure/recovery story locally, without a website account or a separate
+server. After cloning this repository and running `python -m pip install .`:
+
+```bash
+python examples/event_pipeline/failure_recovery_demo.py
+```
+
+The demo starts its own local HTTP fixture and verifies successful collection,
+a retry across worker processes, empty-data rejection, a stopped batch on HTTP
+429, and selective replay after a simulated operator review. It prints the path
+to retained SQLite state, JSON results and a verification report. Each run uses
+a fresh temporary directory. These example policies do not provide automatic
+rate-limit recovery or exactly-once processing.
+
 For HTTP collection with persistent jobs, retries, atomic JSON output and a
 SQLite dead-letter queue, follow the [durable collection guide](docs/getting-started/durable-collection.md).
 It includes local setup, failure/restart steps, job inspection and the function

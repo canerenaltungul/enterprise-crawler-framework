@@ -9,6 +9,29 @@ no framework API and requires no browser or external queue service.
 Clone this repository and run `python -m pip install .` from its root. Installing
 the PyPI wheel alone does not give you the repository's example files.
 
+For a self-contained introduction, run:
+
+```bash
+python examples/event_pipeline/failure_recovery_demo.py
+```
+
+This starts a loopback HTTP fixture on an available port and runs the collection
+CLI in separate processes. It checks success, HTTP 503 retry across process
+boundaries, empty-data rejection, HTTP 429 batch stopping, and selective replay.
+The fixture simulates operator review by explicitly allowing the limited route
+before replay; this is not automatic production rate-limit recovery. Retry delay
+is zero to keep the demonstration short; the worker still persists retry state.
+
+The printed temporary directory retains SQLite databases, results and
+`demo-report.json` for inspection. Each run creates a new directory and never
+resets existing state. Remove that specific directory yourself when finished.
+The fixture stops when the demo exits, so its saved URLs cannot be replayed
+afterwards. The demo exits 0 only after its checks pass, even though its worker
+commands exit 2 when historical DLQ records remain. Use `--pace 8` to leave time
+to read each step while recording your terminal.
+
+To work through the commands yourself with a persistent local server:
+
 For a local, repeatable success case, create a directory containing `item.json`
 with the contents `{"value": 42}`. In a separate terminal, serve that directory:
 
