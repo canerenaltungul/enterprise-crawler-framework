@@ -27,14 +27,18 @@ def endpoint():
             status = 200
             if self.path == "/missing":
                 status = 404
+            elif self.path == "/limited" and calls[self.path] == 1:
+                status = 429
             elif self.path == "/always" or (
                 self.path == "/transient" and calls[self.path] == 1
             ):
                 status = 503
             self.send_response(status)
             self.send_header("Content-Type", "application/json")
+            if status == 429:
+                self.send_header("Retry-After", "60")
             self.end_headers()
-            self.wfile.write(b'{"value": 42}')
+            self.wfile.write(b"[]" if self.path == "/empty" else b'{"value": 42}')
 
         def log_message(self, *args):
             pass
@@ -126,3 +130,70 @@ def test_output_failure_never_acks_as_success(tmp_path, endpoint):
     cli(tmp_path, "work", expected=2)
     snapshot = cli(tmp_path, "inspect")
     assert snapshot["dlq"][0]["failure_type"] == "AtomicWriteError"
+
+
+def test_rate_limit_stops_batch_and_only_selected_failure_is_replayed(
+    tmp_path, endpoint
+):
+    url, calls = endpoint
+    cli(tmp_path, "enqueue", "good", url + "/ok")
+    cli(tmp_path, "enqueue", "limited", url + "/limited")
+    cli(tmp_path, "enqueue", "later", url + "/later")
+    first = cli(tmp_path, "work", expected=2)
+    assert first["summary"]["processed_count"] == 1
+    assert first["summary"]["stop_requested"] is True
+    assert first["active_count"] == 1
+    assert calls == {"/ok": 1, "/limited": 1}
+    record = cli(tmp_path, "inspect")["dlq"][0]
+    assert record["failure_type"] == "RateLimitError"
+    assert "Retry-After=60" in record["failure_message"]
+    record_id = record["dead_letter_id"]
+    cli(tmp_path, "replay", record_id, "--new-job-id", "good", expected=2)
+    cli(tmp_path, "replay", record_id, "--new-job-id", "later", expected=2)
+    cli(tmp_path, "replay", "unknown", "--new-job-id", "new", expected=2)
+    cli(tmp_path, "replay", record_id, "--new-job-id", "reviewed")
+    # A repeated command cannot enqueue a second active delivery with this ID.
+    cli(tmp_path, "replay", record_id, "--new-job-id", "reviewed", expected=2)
+    pending = cli(tmp_path, "inspect", "--job-id", "reviewed")["job"]
+    assert pending["delivery_count"] == 0
+    # Test server now permits the request: operator has resolved the condition.
+    result = cli(tmp_path, "work", expected=2)  # historical DLQ remains visible
+    assert result["summary"]["processed_count"] == 2
+    assert result["active_count"] == 0
+    assert calls == {"/ok": 1, "/limited": 2, "/later": 1}
+    assert cli(tmp_path, "inspect")["dlq"][0] == record
+    cli(tmp_path, "replay", record_id, "--new-job-id", "reviewed", expected=2)
+
+
+def test_empty_response_preserves_previous_output_and_is_visible_in_dlq(
+    tmp_path, endpoint
+):
+    url, _ = endpoint
+    cli(tmp_path, "enqueue", "job", url + "/ok")
+    cli(tmp_path, "work")
+    target = Path(cli(tmp_path, "inspect", "--job-id", "job")["output"])
+    previous = target.read_bytes()
+    cli(tmp_path, "enqueue", "job", url + "/empty")
+    cli(tmp_path, "work", expected=2)
+    assert target.read_bytes() == previous
+    record = cli(tmp_path, "inspect")["dlq"][0]
+    assert record["failure_type"] == "EmptyCollectionError"
+    assert record["delivery_count"] == 1
+    cli(tmp_path, "enqueue", "empty-is-valid", url + "/empty", "--allow-empty")
+    cli(tmp_path, "work", expected=2)
+    target = Path(cli(tmp_path, "inspect", "--job-id", "empty-is-valid")["output"])
+    assert json.loads(target.read_text())["data"] == []
+
+
+def test_replay_refuses_original_job_still_active(tmp_path, endpoint):
+    url, _ = endpoint
+    cli(tmp_path, "enqueue", "job", url + "/missing")
+    cli(tmp_path, "work", expected=2)
+    record_id = cli(tmp_path, "inspect")["dlq"][0]["dead_letter_id"]
+    cli(tmp_path, "enqueue", "job", url + "/ok")
+    result = cli(tmp_path, "replay", record_id, "--new-job-id", "duplicate", expected=2)
+    assert "still active" in result["error"]
+    state = cli(tmp_path, "inspect", "--job-id", "duplicate")
+    assert state["job"] is None
+    assert state["active_count"] == 1
+    assert len(state["dlq"]) == 1

@@ -40,6 +40,55 @@ To exercise terminal failure, enqueue a URL ending in `/missing.json` while the
 server is running. A 404 goes to SQLite DLQ on the first delivery. `inspect`
 shows the persisted error type, message, job payload and delivery count.
 
+## Review and rerun only the failed job
+
+After fixing the source or collection code, copy the `dead_letter_id` from
+`inspect` and publish that one job with a **new** ID:
+
+```bash
+python examples/event_pipeline/collect_json.py --state-dir /path/to/ecf-state replay DEAD_LETTER_ID --new-job-id item-1-reviewed
+python examples/event_pipeline/collect_json.py --state-dir /path/to/ecf-state work
+python examples/event_pipeline/collect_json.py --state-dir /path/to/ecf-state inspect --job-id item-1-reviewed
+```
+
+For the local 404 example, create `missing.json` in the served directory before
+replay. The successful jobs are not re-enqueued. The new job gets a fresh delivery
+budget and its own output filename; its event metadata records `replayed_from`
+and `original_message_id`. The original DLQ record remains available for review.
+Consequently `work` still exits 2 while historical DLQ records exist; inspect its
+batch summary and the new job's output to see whether recovery succeeded.
+
+Replay refuses unknown DLQ IDs, active original jobs, and IDs already present in
+the queue, DLQ or result directory. This protects the single-worker example from
+accidental ID reuse and replay after an incomplete source finalization. It is
+not a distributed replay transaction or a global replay-once guarantee: an
+operator can intentionally replay again with another new ID. Stop workers while
+reviewing/replaying; the preflight checks do not lock all stores together.
+
+## Failure policy in this example
+
+| Failure | Behavior | Operator action |
+| --- | --- | --- |
+| Connection/timeout, HTTP 408/500/502/503/504 | Scheduled retry, then DLQ after exhaustion | Inspect persisted delivery state; invoke work again when due |
+| HTTP 429 | Preserve error and Retry-After in DLQ; stop this batch | Review source limits, wait as required and adjust collection before explicit replay |
+| Null, empty object/list/string or blank string | DLQ before output is written | Inspect source/parser; fix it before replay |
+| Other HTTP errors, invalid JSON, output write failure | DLQ | Diagnose and fix the cause before replay |
+
+HTTP 200 alone is not evidence of useful data. The default `validate_data`
+rejects empty results while accepting valid `0` and `false`. A previous output
+file is left untouched on validation failure; it may therefore be stale. Check
+DLQ and exit status instead of treating an existing file as proof of freshness.
+For sources where empty data is legitimate, enqueue with `--allow-empty`.
+Replace `validate_data` with source-specific schema/completeness checks:
+`{"items": []}` is not detected by this basic top-level check.
+
+429 is deliberately **not** automatically retried. Stopping the batch leaves
+other jobs pending, but is not a persisted domain-wide cooldown: starting a new
+worker can process them. Review before restarting workers. Retry-After is shown
+as received, not parsed or enforced. No automatic client/proxy switching is
+performed. If your application needs another recovery path, implement it in
+your collection layer after understanding the source's requirements.
+
 ## Connect your code
 
 Edit `collect(session, url)` in the example. Return JSON-serializable data on
@@ -53,12 +102,9 @@ This is an integration pattern, not an included browser adapter, browser pool,
 crash watchdog or async runtime. Browser-specific exceptions need an explicit
 application policy. Keep framework-installed dependencies unchanged.
 
-The example retries connection errors, request timeouts, and its chosen HTTP
-statuses (408, 429, 500, 502, 503, 504). Other failures, including invalid JSON,
-404 and output write errors, go to DLQ. These are example choices, not universal
-policies. Defaults are three deliveries and exponential delays starting at five
-seconds. `work --retry-delay 10 --max-deliveries 4` changes them. Retry-After is
-not interpreted by this example. Requests uses its default adapter with no
+These are example choices, not universal framework policies. Defaults are three
+deliveries and exponential delays starting at five seconds.
+`work --retry-delay 10 --max-deliveries 4` changes them. Requests uses its default adapter with no
 additional transport retries; using ECF's HTTP session would add a separate
 transport retry layer. Budget those layers separately.
 
@@ -88,7 +134,7 @@ lifecycle by calling `execute()` directly or overriding `run()` to solve this.
 
 ## Operation and limits
 
-- `work` processes a batch. It stops after a retry decision or when no due job
+- `work` processes a batch. It stops after a retry decision, HTTP 429, or when no due job
   remains. It does not wait for scheduled retries or act as a cron scheduler.
   Exit code 0 means no active jobs, no DLQ records and no failures in this batch;
   2 means attention or another invocation is needed. Old DLQ records also keep
@@ -117,5 +163,6 @@ lifecycle by calling `execute()` directly or overriding `run()` to solve this.
   transaction with a remote sink and are not a distributed idempotency lock.
 
 The tests in `tests/integration/test_durable_collection_example.py` run a local
-HTTP server and separate CLI processes to cover restart, scheduling, DLQ and
-output failure without depending on public websites.
+HTTP server and separate CLI processes to cover restart, scheduling, DLQ,
+rate-limit stopping, empty-data rejection, selective replay and output failure
+without depending on public websites.

@@ -87,6 +87,11 @@ SQLite dead-letter queue, follow the [durable collection guide](docs/getting-sta
 It includes local setup, failure/restart steps, job inspection and the function
 to replace with your own collection code.
 
+The example rejects unexpected empty data before writing output, stops its batch
+on HTTP 429 for operator review, and lets you replay one selected DLQ job after
+fixing its cause. Successful jobs are not re-enqueued. These are application
+policies in the example, built on the existing ECF contracts.
+
 This path connects a collection function directly to an event handler.
 `BaseBot.run()` returns an `ExecutionResult`; a FAILED result returned normally
 from a handler does **not** automatically trigger event retry. The guide explains

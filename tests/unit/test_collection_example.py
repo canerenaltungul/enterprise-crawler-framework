@@ -61,3 +61,36 @@ def test_stop_request_does_not_interrupt_current_scope_and_restores_signals():
             assert worker.stopped
             raise ValueError("resource scope still unwinds")
     assert {s: signal.getsignal(s) for s in before} == before
+
+
+@pytest.mark.parametrize("data", [None, {}, [], "", "  \n"])
+def test_empty_data_is_not_success(data):
+    with pytest.raises(example.EmptyCollectionError):
+        example.validate_data(data)
+
+
+@pytest.mark.parametrize("data", [0, False, {"value": 0}, [1], "value"])
+def test_nonempty_and_valid_scalar_data_are_accepted(data):
+    example.validate_data(data)
+
+
+def test_rate_limit_preserves_error_and_requests_stop(tmp_path, monkeypatch):
+    error = example.RateLimitError("HTTP 429")
+    stops = []
+
+    def limited(*args):
+        raise error
+
+    monkeypatch.setattr(example, "collect", limited)
+    handler = example.make_handler(object(), tmp_path, lambda: stops.append(True))
+    with pytest.raises(example.RateLimitError) as caught:
+        handler(
+            Event(
+                "COLLECT_JSON",
+                datetime.now(timezone.utc),
+                {"job_id": "job", "url": "unused"},
+            )
+        )
+    assert caught.value is error
+    assert stops == [True]
+    assert not (tmp_path / "results").exists()
