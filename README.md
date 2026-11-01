@@ -82,6 +82,12 @@ python examples/basic_bot/hello_bot.py
 
 ## Use your own collection code
 
+[![Watch the failure recovery demo: a worker stops on HTTP 429](docs/launch/media/failure-recovery.png)](https://raw.githubusercontent.com/canerenaltungul/enterprise-crawler-framework/main/docs/launch/media/failure-recovery.mp4)
+
+[Watch the 47-second demo (MP4)](https://raw.githubusercontent.com/canerenaltungul/enterprise-crawler-framework/main/docs/launch/media/failure-recovery.mp4). Follow a real local run from a saved retry to selective replay: after the simulated rate limit is resolved, the successful job is never fetched again.
+
+[Turkish subtitles (SRT)](docs/launch/media/failure-recovery.tr.srt)
+
 Try the failure/recovery story locally, without a website account or a separate
 server. After cloning this repository and running `python -m pip install .`:
 

@@ -61,6 +61,10 @@ https://github.com/canerenaltungul/enterprise-crawler-framework
 
 ## Terminal recording outline (approximately 45–60 seconds)
 
+The [47-second MP4](media/failure-recovery.mp4) pairs selected terminal output
+from a verified local run with short English captions. It omits the machine's
+temporary path. The following command is for recording another run yourself.
+
 Use an installed checkout and run:
 
 ```bash
@@ -77,4 +81,4 @@ After a simulated operator review, only the selected failure is replayed. The
 successful job was collected once, and failure history remains available.”
 
 Caption: “Local HTTP fixture • SQLite state • separate worker processes •
-example application policies.” This is a recording outline, not a recorded video.
+example application policies.”

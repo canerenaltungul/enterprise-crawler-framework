@@ -1,0 +1,34 @@
+1
+00:00:00,000 --> 00:00:04,000
+Bir crawler işi hata aldığında ne olur?
+Bu demo yerel bir HTTP sunucusu ve SQLite kullanıyor.
+
+2
+00:00:04,000 --> 00:00:11,000
+Worker, işi tamamlandı olarak işaretlemeden
+önce topladığı veriyi dosyaya yazıyor.
+
+3
+00:00:11,000 --> 00:00:18,000
+HTTP 503 sonrası deneme bilgisi SQLite'ta saklanıyor.
+Yeni worker bekleyen işi okuyup tamamlıyor.
+
+4
+00:00:18,000 --> 00:00:25,000
+Beklenmeyen boş yanıt çıktı olarak yazılmıyor.
+Hata kaydı inceleme için saklanıyor.
+
+5
+00:00:25,000 --> 00:00:32,000
+HTTP 429 gelince worker bu çalışmayı durduruyor.
+Sıradaki iş kuyrukta bekliyor.
+
+6
+00:00:32,000 --> 00:00:40,000
+Yerel sunucu yeniden isteğe izin verince
+seçilen iş tekrarlanıyor. Başarılı iş tekrar çekilmiyor.
+
+7
+00:00:40,000 --> 00:00:47,000
+Kendiniz denemek için repoyu klonlayıp paketi kurun
+ve ekrandaki demo komutunu çalıştırın.
